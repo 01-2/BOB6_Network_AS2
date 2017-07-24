@@ -8,10 +8,21 @@
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <net/ethernet.h>
+#include <netinet/ip.h>
 
 struct ether_header *eth;
 struct ip *iph;
 struct tcphdr *tcph;
+
+/*
+
+	Requirements 
+	Ethernet : Destination MAC , Source MAC
+	IP 	 : Destination IP  , Source IP
+	TCP	 : Destination port, Source port
+	Data
+
+*/
 
 void print_eth(const unsigned char *data){
 	eth = (struct ether_header *) data;
@@ -24,6 +35,17 @@ void print_eth(const unsigned char *data){
 		 eth->ether_shost[0], eth->ether_shost[1], eth->ether_shost[2],
 		 eth->ether_shost[3], eth->ether_shost[4], eth->ether_shost[5]);
 
+}
+
+void print_iph(const unsigned char *data){
+	iph = (struct ip *) data;
+
+	char buf[20];
+
+	printf("---------- IP  ----------\n");
+	printf("DEST IP  : %s \n", inet_ntop(AF_INET, &(iph->ip_dst), buf, sizeof(buf)));
+	printf("SRC  IP  : %s \n", inet_ntop(AF_INET, &(iph->ip_src), buf, sizeof(buf)));
+	
 }
 
 int main(int argc, char *argv[])
@@ -91,10 +113,17 @@ int main(int argc, char *argv[])
 	while((res = pcap_next_ex(adhandle, &header, &pkt_data)) >= 0){
 
 		if(res == 0) continue;
-		if(count > 10) break;
-		
+		if(count > 9) break;
+		printf("\nPacket %d //////////////////////////////\n", count+1);
 		print_eth(pkt_data);
-		printf("Packet %d\n", count);
+		
+		if(ntohs(eth->ether_type) == 0x0800){
+			pkt_data = pkt_data + sizeof(*eth);
+			print_iph(pkt_data);
+		}
+		else
+			printf("It doesn't have IP header!\n");
+		
 		count++;
 	}
 
