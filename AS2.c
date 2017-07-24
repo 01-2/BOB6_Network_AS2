@@ -56,6 +56,22 @@ void print_port(const unsigned char *data){
 	printf("SRC  PORT : %d \n", ntohs(tcph->th_sport));
 	
 }
+
+void print_data(const unsigned char *data, int len){
+
+	int count = 1;
+
+	printf("---------- DATA ----------\n");
+	printf("0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
+	
+	while((count < len) && (count < 33)){
+		printf("%02x ", data[count-1]);
+		if(count % 16 == 0)
+			printf("\n");
+		count++;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	char *dev;         
@@ -76,6 +92,7 @@ int main(int argc, char *argv[])
 	struct pcap_pkthdr *header;
 	const unsigned char *pkt_data;
 	int count = 0;
+	int dataSize = 0;
 
 	if(argc < 2){
 		printf("Need more argument!!\n");
@@ -121,7 +138,9 @@ int main(int argc, char *argv[])
 	while((res = pcap_next_ex(adhandle, &header, &pkt_data)) >= 0){
 
 		if(res == 0) continue;
-		// if(count > 9) break;
+		if(count > 9) break;
+
+		dataSize = 0;
 		printf("\nPacket %d //////////////////////////////\n", count+1);
 		print_eth(pkt_data);
 		
@@ -132,15 +151,17 @@ int main(int argc, char *argv[])
 			if(iph->ip_p == IPPROTO_TCP){
 				pkt_data = pkt_data + (iph->ip_hl * 4);
 				print_port(pkt_data);
+				
+				pkt_data = pkt_data + (tcph->th_off*4);
+				dataSize = iph->ip_len - (sizeof(*eth)+(iph->ip_hl + tcph->th_off) * 4);
+				print_data(pkt_data, dataSize);
+				
 			}
-			else
-				printf("It doesn't have TCP header!\n");
+			else	printf("It doesn't have TCP header!\n");
 
 		}
-		else
-			printf("It doesn't have IP header!\n");
-	
-		
+		else	printf("It doesn't have IP header!\n");
+
 		count++;
 	}
 
