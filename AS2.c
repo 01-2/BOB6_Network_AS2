@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
 
 struct ether_header *eth;
 struct ip *iph;
@@ -48,6 +49,13 @@ void print_iph(const unsigned char *data){
 	
 }
 
+void print_port(const unsigned char *data){
+	tcph = (struct tcphdr *) data;
+	printf("---------- PORT ----------\n");
+	printf("DEST PORT : %d \n", ntohs(tcph->th_dport));
+	printf("SRC  PORT : %d \n", ntohs(tcph->th_sport));
+	
+}
 int main(int argc, char *argv[])
 {
 	char *dev;         
@@ -113,16 +121,25 @@ int main(int argc, char *argv[])
 	while((res = pcap_next_ex(adhandle, &header, &pkt_data)) >= 0){
 
 		if(res == 0) continue;
-		if(count > 9) break;
+		// if(count > 9) break;
 		printf("\nPacket %d //////////////////////////////\n", count+1);
 		print_eth(pkt_data);
 		
-		if(ntohs(eth->ether_type) == 0x0800){
+		if(ntohs(eth->ether_type) == ETHERTYPE_IP){
 			pkt_data = pkt_data + sizeof(*eth);
 			print_iph(pkt_data);
+
+			if(iph->ip_p == IPPROTO_TCP){
+				pkt_data = pkt_data + (iph->ip_hl * 4);
+				print_port(pkt_data);
+			}
+			else
+				printf("It doesn't have TCP header!\n");
+
 		}
 		else
 			printf("It doesn't have IP header!\n");
+	
 		
 		count++;
 	}
