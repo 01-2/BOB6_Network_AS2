@@ -1,13 +1,11 @@
 #include <pcap.h>
-#include <memory.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <stdint.h>
 #include <net/ethernet.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
@@ -81,10 +79,6 @@ int main(int argc, char *argv[])
 	
 	pcap_if_t *alldevs;
 	pcap_if_t *d;
- 
-	bpf_u_int32 mask;      
-	bpf_u_int32 net;     
-	struct bpf_program fp;		
 
 	pcap_t *adhandle;
 	int ip_res = 0, tcp_res = 0;
@@ -93,7 +87,8 @@ int main(int argc, char *argv[])
 	const unsigned char *pkt_data;
 	int count = 0;
 	int dataSize = 0;
-
+	
+	// checking arguments 
 	if(argc < 2){
 		printf("Need more argument!!\n");
 		exit(1);
@@ -119,7 +114,8 @@ int main(int argc, char *argv[])
 		printf("\nNo interfaces found!\n");
 		exit(1);
 	}
-	
+
+	// move device pointer
 	for ( d = alldevs, i = 0; i < input-1; d = d->next, i++);
 	
 
@@ -132,9 +128,11 @@ int main(int argc, char *argv[])
 	}
 	
 	printf("\nListening on %s...\n", d->name);
-
+	
+	// free all devices
 	pcap_freealldevs(alldevs);
 	
+	// get next packet by using pcap_next_ex function
 	while((res = pcap_next_ex(adhandle, &header, &pkt_data)) >= 0){
 
 		if(res == 0) continue;
@@ -144,14 +142,18 @@ int main(int argc, char *argv[])
 		printf("\nPacket %d //////////////////////////////\n", count+1);
 		print_eth(pkt_data);
 		
+		// check next header is IPv4 header or not
 		if(ntohs(eth->ether_type) == ETHERTYPE_IP){
 			pkt_data = pkt_data + sizeof(*eth);
 			print_iph(pkt_data);
-
+			
+			// check next header is TCP header or not 
 			if(iph->ip_p == IPPROTO_TCP){
+				// calculate TCP header offset
 				pkt_data = pkt_data + (iph->ip_hl * 4);
 				print_port(pkt_data);
 				
+				// calculate data offset
 				pkt_data = pkt_data + (tcph->th_off*4);
 				dataSize = iph->ip_len - (sizeof(*eth)+(iph->ip_hl + tcph->th_off) * 4);
 				print_data(pkt_data, dataSize);
