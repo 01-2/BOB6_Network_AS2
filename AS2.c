@@ -39,7 +39,7 @@ void print_eth(const unsigned char *data){
 void print_iph(const unsigned char *data){
 	iph = (struct ip *) data;
 
-	char buf[20];
+	char buf[INET_ADDRSTRLEN];
 
 	printf("---------- IP  ----------\n");
 	printf("DEST IP  : %s \n", inet_ntop(AF_INET, &(iph->ip_dst), buf, sizeof(buf)));
